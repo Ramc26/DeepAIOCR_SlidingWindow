@@ -3,1296 +3,962 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sliding-Window Document Classifier — Live Architecture & Flow</title>
-  <!-- Bootstrap 5.3 CSS -->
+  <title>Sliding-Window Document Classifier — AI Orchestration Engine</title>
+  <!-- Bootstrap 5.3 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <!-- Bootstrap Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
-  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --bg-deep: #07090e;
-      --glass-bg: rgba(17, 23, 38, 0.58);
-      --glass-bg-hover: rgba(26, 35, 58, 0.72);
+      --bg-dark: #050811;
+      --glass-surface: rgba(15, 23, 42, 0.55);
+      --glass-elevated: rgba(30, 41, 59, 0.65);
       --glass-border: rgba(255, 255, 255, 0.09);
-      --glass-highlight: rgba(255, 255, 255, 0.18);
-      --accent-cyan: #38bdf8;
-      --accent-indigo: #818cf8;
-      --accent-emerald: #34d399;
-      --accent-amber: #fbbf24;
-      --accent-rose: #fb7185;
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
+      --glass-border-hover: rgba(56, 189, 248, 0.4);
+      --cyan: #38bdf8;
+      --indigo: #818cf8;
+      --emerald: #34d399;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+    }
+
+    html {
+      scroll-behavior: smooth;
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: var(--bg-deep);
-      color: var(--text-main);
-      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-dark);
+      color: #f8fafc;
       overflow-x: hidden;
-      position: relative;
+      margin: 0;
+      padding: 0;
     }
 
-    /* Ambient Mesh Gradient Background */
-    .ambient-canvas {
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Full-Page Ambient Background */
+    .ambient-bg {
       position: fixed;
       inset: 0;
       z-index: -1;
-      overflow: hidden;
+      pointer-events: none;
       background:
-        radial-gradient(circle at 12% 18%, rgba(56, 189, 248, 0.13), transparent 38%),
-        radial-gradient(circle at 86% 22%, rgba(129, 140, 248, 0.14), transparent 42%),
-        radial-gradient(circle at 52% 85%, rgba(52, 211, 153, 0.09), transparent 45%),
-        #07090e;
+        radial-gradient(circle at 15% 10%, rgba(56, 189, 248, 0.14), transparent 35%),
+        radial-gradient(circle at 85% 25%, rgba(129, 140, 248, 0.14), transparent 40%),
+        radial-gradient(circle at 50% 75%, rgba(52, 211, 153, 0.08), transparent 45%),
+        var(--bg-dark);
     }
 
-    .ambient-orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(90px);
-      opacity: 0.35;
-      animation: floatOrb 18s ease-in-out infinite alternate;
-    }
-    .orb-1 { width: 420px; height: 420px; background: #0284c7; top: -80px; left: -100px; }
-    .orb-2 { width: 360px; height: 360px; background: #4f46e5; bottom: 5%; right: -80px; animation-delay: -7s; }
-
-    @keyframes floatOrb {
-      0% { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(50px, 35px) scale(1.12); }
+    .grid-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(to right, rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
     }
 
-    /* Core Glassmorphism Cards */
-    .glass-panel {
-      background: var(--glass-bg);
-      backdrop-filter: blur(18px) saturate(165%);
-      -webkit-backdrop-filter: blur(18px) saturate(165%);
+    /* Sticky Glass Navbar */
+    .navbar-glass {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(5, 8, 17, 0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .nav-link-custom {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-decoration: none;
+      padding: 8px 14px;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+    }
+    .nav-link-custom:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    /* Glass Cards */
+    .glass-card {
+      background: var(--glass-surface);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--glass-border);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .glass-card-hover:hover {
+      transform: translateY(-4px);
+      border-color: var(--glass-border-hover);
+      box-shadow: 0 28px 70px rgba(56, 189, 248, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    }
+
+    /* Section Spacing & Typography */
+    section {
+      padding: 88px 0;
+      position: relative;
+    }
+
+    .hero-section {
+      padding-top: 64px;
+      padding-bottom: 72px;
+    }
+
+    .gradient-title {
+      background: linear-gradient(135deg, #ffffff 20%, #93c5fd 65%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.03em;
+    }
+
+    .section-eyebrow {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--cyan);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 99px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      margin-bottom: 16px;
+    }
+
+    /* Scroll Reveal Animations */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 16-Page Interactive Ribbon */
+    .page-track {
+      display: grid;
+      grid-template-columns: repeat(16, minmax(54px, 1fr));
+      gap: 8px;
+      padding: 14px;
+      background: rgba(3, 6, 14, 0.6);
+      border: 1px solid var(--glass-border);
       border-radius: 16px;
-      transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
-    }
-
-    .glass-panel-interactive:hover {
-      border-color: var(--glass-highlight);
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-    }
-
-    .mono {
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* Top Pill Badge */
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent-emerald);
-      box-shadow: 0 0 12px var(--accent-emerald);
-      display: inline-block;
-      animation: pulseGlow 2s infinite;
-    }
-
-    @keyframes pulseGlow {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.45; transform: scale(1.25); }
-    }
-
-    /* 16-Page Sliding Ribbon */
-    .page-ribbon-wrapper {
-      position: relative;
-      padding: 14px 10px;
       overflow-x: auto;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(255,255,255,0.15) transparent;
     }
 
-    .page-ribbon {
-      display: flex;
-      gap: 10px;
-      min-width: max-content;
-      padding: 6px 4px;
-    }
-
-    .page-node {
-      width: 96px;
-      min-height: 112px;
+    .track-node {
+      height: 58px;
       border-radius: 12px;
-      padding: 10px;
-      cursor: pointer;
-      position: relative;
-      background: rgba(15, 23, 42, 0.55);
+      background: rgba(255, 255, 255, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.07);
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
       user-select: none;
     }
-
-    .page-node:hover {
-      background: rgba(30, 41, 59, 0.75);
+    .track-node:hover {
+      background: rgba(255, 255, 255, 0.08);
       transform: translateY(-2px);
     }
 
-    /* Sliding Window Roles: N-1, N, N+1 */
-    .page-node.role-prev {
-      border-color: rgba(129, 140, 248, 0.75);
-      background: linear-gradient(160deg, rgba(99, 102, 241, 0.20), rgba(15, 23, 42, 0.75));
-      box-shadow: 0 0 22px rgba(99, 102, 241, 0.22);
+    .track-node.is-prev {
+      border-color: var(--indigo);
+      background: rgba(129, 140, 248, 0.18);
+      color: #e0e7ff;
       transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(129, 140, 248, 0.2);
     }
 
-    .page-node.role-target {
-      border-color: var(--accent-cyan);
-      background: linear-gradient(160deg, rgba(56, 189, 248, 0.26), rgba(15, 23, 42, 0.85));
-      box-shadow: 0 0 30px rgba(56, 189, 248, 0.38), inset 0 0 12px rgba(56, 189, 248, 0.2);
-      transform: translateY(-6px) scale(1.04);
+    .track-node.is-target {
+      border-color: var(--cyan);
+      background: linear-gradient(160deg, rgba(56, 189, 248, 0.35), rgba(15, 23, 42, 0.9));
+      color: #ffffff;
+      transform: translateY(-6px) scale(1.06);
+      box-shadow: 0 0 28px rgba(56, 189, 248, 0.45);
       z-index: 3;
     }
 
-    .page-node.role-next {
-      border-color: rgba(251, 191, 36, 0.7);
-      background: linear-gradient(160deg, rgba(251, 191, 36, 0.16), rgba(15, 23, 42, 0.75));
-      box-shadow: 0 0 22px rgba(251, 191, 36, 0.18);
+    .track-node.is-next {
+      border-color: var(--amber);
+      background: rgba(251, 191, 36, 0.16);
+      color: #fef3c7;
       transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(251, 191, 36, 0.18);
     }
 
-    .window-tag {
-      font-size: 0.63rem;
+    .node-role-label {
+      font-size: 0.6rem;
       font-weight: 700;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
-      padding: 2px 6px;
-      border-radius: 99px;
-      display: inline-block;
-      width: fit-content;
+      opacity: 0.85;
     }
-    .tag-prev { background: rgba(129, 140, 248, 0.25); color: #c7d2fe; border: 1px solid rgba(129, 140, 248, 0.4); }
-    .tag-target { background: rgba(56, 189, 248, 0.3); color: #e0f2fe; border: 1px solid rgba(56, 189, 248, 0.6); }
-    .tag-next { background: rgba(251, 191, 36, 0.22); color: #fde68a; border: 1px solid rgba(251, 191, 36, 0.45); }
-    .tag-idle { background: rgba(255, 255, 255, 0.05); color: var(--text-muted); }
 
-    /* Label Category Badges */
-    .label-pill {
-      font-size: 0.68rem;
-      padding: 3px 7px;
-      border-radius: 6px;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .cat-Invoice { background: rgba(56, 189, 248, 0.16); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.35); }
-    .cat-PurchaseOrder { background: rgba(168, 85, 247, 0.16); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.35); }
-    .cat-Contract { background: rgba(52, 211, 153, 0.16); color: #6ee7b7; border: 1px solid rgba(52, 211, 153, 0.35); }
-    .cat-Appendix { background: rgba(251, 191, 36, 0.16); color: #fcd34d; border: 1px solid rgba(251, 191, 36, 0.35); }
-    .cat-Other { background: rgba(148, 163, 184, 0.18); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.35); }
-    .cat-FAILED { background: rgba(251, 113, 133, 0.22); color: #fda4af; border: 1px solid rgba(251, 113, 133, 0.55); }
-    .cat-PENDING { background: rgba(255, 255, 255, 0.04); color: #64748b; border: 1px dashed rgba(255, 255, 255, 0.12); }
-
-    /* Window Inspection Cards (N-1, N, N+1) */
-    .slot-card {
+    /* 3-Page Stage Cards */
+    .stage-window-card {
+      border-radius: 18px;
+      padding: 24px;
       height: 100%;
-      border-radius: 14px;
-      padding: 16px;
-      background: rgba(10, 15, 28, 0.65);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      position: relative;
-      transition: all 0.3s ease;
+      min-height: 275px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: rgba(10, 15, 29, 0.72);
+      border: 1px solid var(--glass-border);
+      transition: all 0.35s ease;
     }
-    .slot-card.slot-prev { border-top: 3px solid var(--accent-indigo); }
-    .slot-card.slot-target {
-      border-top: 3px solid var(--accent-cyan);
-      background: linear-gradient(180deg, rgba(56, 189, 248, 0.09) 0%, rgba(10, 15, 28, 0.78) 100%);
-      box-shadow: 0 10px 35px rgba(56, 189, 248, 0.12);
-    }
-    .slot-card.slot-next { border-top: 3px solid var(--accent-amber); }
 
-    .doc-snippet {
-      font-size: 0.77rem;
-      line-height: 1.55;
+    .stage-prev { border-top: 3px solid var(--indigo); }
+    .stage-target {
+      border-top: 3px solid var(--cyan);
+      background: linear-gradient(180deg, rgba(56, 189, 248, 0.11) 0%, rgba(10, 15, 29, 0.85) 100%);
+      box-shadow: 0 20px 50px rgba(56, 189, 248, 0.14);
+    }
+    .stage-next { border-top: 3px solid var(--amber); }
+
+    .doc-box {
+      font-size: 0.84rem;
+      line-height: 1.6;
       color: #cbd5e1;
-      background: rgba(2, 6, 23, 0.65);
+      background: rgba(2, 6, 16, 0.65);
       border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 10px;
-      padding: 11px 13px;
-      height: 122px;
-      overflow-y: auto;
+      border-radius: 12px;
+      padding: 16px;
+      min-height: 128px;
       white-space: pre-wrap;
     }
 
-    /* Animated SVG Flow Pipeline */
-    .pipeline-stage {
-      border-radius: 12px;
-      padding: 12px 14px;
-      background: rgba(15, 23, 42, 0.72);
-      border: 1px solid rgba(255, 255, 255, 0.09);
-      transition: all 0.25s ease;
-      position: relative;
-    }
-    .pipeline-stage.active-stage {
-      border-color: var(--accent-cyan);
-      box-shadow: 0 0 24px rgba(56, 189, 248, 0.28);
-      background: rgba(30, 41, 59, 0.88);
-    }
-    .pipeline-stage.error-stage {
-      border-color: var(--accent-rose);
-      box-shadow: 0 0 24px rgba(251, 113, 133, 0.32);
+    /* Animated Stream Connector Between Cards */
+    .stream-connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
     }
 
-    .flow-connector {
+    .stream-beam {
+      width: 100%;
       height: 3px;
       background: rgba(255, 255, 255, 0.08);
-      position: relative;
-      overflow: hidden;
       border-radius: 99px;
-      margin: 10px 0;
+      overflow: hidden;
+      position: relative;
+      margin: 8px 0;
     }
-    .flow-connector::after {
+    .stream-beam::after {
       content: "";
       position: absolute;
-      top: 0;
-      left: -35%;
-      width: 35%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-indigo), transparent);
-      animation: streamFlow 1.35s linear infinite;
+      inset: 0;
+      width: 50%;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--indigo), transparent);
+      animation: beamSlide 1.25s infinite linear;
     }
-    @keyframes streamFlow {
-      0% { left: -35%; }
-      100% { left: 100%; }
+    @keyframes beamSlide {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(220%); }
     }
 
-    /* Code & Terminal Consoles */
-    .code-console {
-      background: rgba(4, 7, 15, 0.82);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 14px;
-      font-size: 0.75rem;
-      line-height: 1.55;
-      height: 310px;
-      overflow-y: auto;
-      color: #e2e8f0;
-    }
-
-    .json-key { color: #7dd3fc; }
-    .json-str { color: #86efac; }
-    .json-num { color: #fcd34d; }
-    .json-null { color: #fb7185; font-style: italic; }
-
-    /* Custom Buttons & Controls */
-    .btn-glass {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      color: var(--text-main);
-      backdrop-filter: blur(8px);
-      transition: all 0.2s ease;
-    }
-    .btn-glass:hover {
-      background: rgba(255, 255, 255, 0.13);
-      border-color: rgba(255, 255, 255, 0.28);
-      color: #fff;
-    }
-    .btn-glass-cyan {
-      background: rgba(56, 189, 248, 0.16);
-      border: 1px solid rgba(56, 189, 248, 0.45);
-      color: #e0f2fe;
-    }
-    .btn-glass-cyan:hover {
-      background: rgba(56, 189, 248, 0.28);
-      color: #fff;
-    }
-
-    .metric-value {
-      font-size: 1.35rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-
-    .file-chip {
+    /* Badges & Pills */
+    .pill-badge {
+      padding: 6px 13px;
+      border-radius: 99px;
       font-size: 0.76rem;
-      padding: 5px 11px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #e2e8f0;
+      font-weight: 600;
       display: inline-flex;
       align-items: center;
       gap: 6px;
+    }
+    .pill-indigo  { background: rgba(129, 140, 248, 0.18); color: #c7d2fe; border: 1px solid rgba(129, 140, 248, 0.45); }
+    .pill-cyan    { background: rgba(56, 189, 248, 0.2);  color: #bae6fd; border: 1px solid rgba(56, 189, 248, 0.5); }
+    .pill-amber   { background: rgba(251, 191, 36, 0.18); color: #fde68a; border: 1px solid rgba(251, 191, 36, 0.45); }
+    .pill-emerald { background: rgba(52, 211, 153, 0.18); color: #a7f3d0; border: 1px solid rgba(52, 211, 153, 0.5); }
+    .pill-rose    { background: rgba(251, 113, 133, 0.22); color: #fecdd3; border: 1px solid rgba(251, 113, 133, 0.55); }
+
+    /* Code Windows */
+    .code-window {
+      background: rgba(4, 7, 15, 0.85);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .code-window-header {
+      padding: 12px 18px;
+      background: rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .window-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .window-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .code-body {
+      padding: 20px;
+      font-size: 0.82rem;
+      line-height: 1.65;
+      color: #e2e8f0;
+      margin: 0;
+      max-height: 380px;
+      overflow-y: auto;
+    }
+
+    .j-key { color: #7dd3fc; }
+    .j-str { color: #86efac; }
+    .j-num { color: #fcd34d; }
+    .j-null { color: #fb7185; font-style: italic; }
+
+    /* Buttons */
+    .btn-glass-action {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #f8fafc;
+      border-radius: 12px;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .btn-glass-action:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.28);
+      color: #fff;
     }
   </style>
 </head>
 <body>
 
-  <!-- Ambient Glass Background -->
-  <div class="ambient-canvas">
-    <div class="ambient-orb orb-1"></div>
-    <div class="ambient-orb orb-2"></div>
-  </div>
+  <!-- Background Layers -->
+  <div class="ambient-bg"></div>
+  <div class="grid-overlay"></div>
 
-  <div class="container-xxl py-4 px-3 px-md-4">
+  <!-- STICKY PRODUCT NAVBAR -->
+  <nav class="navbar-glass py-3">
+    <div class="container-xl d-flex flex-wrap align-items-center justify-content-between">
+      <a href="#" class="d-flex align-items-center gap-2 text-decoration-none text-white fw-bold">
+        <span class="p-2 rounded-3 d-inline-flex" style="background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.4);">
+          <i class="bi bi-layers-half text-info"></i>
+        </span>
+        <span>SlidingWindow<span class="text-info">.ai</span></span>
+        <span class="badge bg-dark border border-secondary-subtle mono ms-1" style="font-size:0.7rem;">v1.0 • Python 3.12+</span>
+      </a>
 
-    <!-- HEADER NAVBAR -->
-    <header class="glass-panel p-3 px-4 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
-      <div class="d-flex align-items-center gap-3">
-        <div class="p-2 rounded-3 d-flex align-items-center justify-content-center"
-             style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4);">
-          <i class="bi bi-layers-half fs-4 text-info"></i>
-        </div>
-        <div>
-          <div class="d-flex align-items-center gap-2">
-            <h1 class="h5 mb-0 fw-bold">Sliding-Window Document Classifier</h1>
-            <span class="badge rounded-pill text-bg-dark border border-secondary-subtle mono" style="font-size: 0.7rem;">
-              Python 3.12+ • OpenRouter / Cloudflare AI
-            </span>
+      <div class="d-none d-md-flex align-items-center gap-1">
+        <a href="#simulator" class="nav-link-custom">Live Simulator</a>
+        <a href="#architecture" class="nav-link-custom">Orchestration & Design</a>
+        <a href="#prompt" class="nav-link-custom">Prompt & JSON Schema</a>
+        <a href="#quickstart" class="nav-link-custom">Evaluation & Setup</a>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <span class="pill-badge pill-emerald mono" style="font-size: 0.72rem;">
+          <span class="spinner-grow spinner-grow-sm text-success" style="width:7px;height:7px;"></span>
+          16/16 Demo Matched
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===================================================================
+       SECTION 1: HERO + CONTINUOUS REAL-TIME SLIDING WINDOW STAGE
+       =================================================================== -->
+  <section id="simulator" class="hero-section">
+    <div class="container-xl">
+
+      <!-- Hero Header -->
+      <div class="row justify-content-center text-center mb-5 reveal visible">
+        <div class="col-12 col-lg-9">
+          <div class="section-eyebrow mono">
+            <i class="bi bi-stars"></i> Context-Aware PDF Page Classification
           </div>
-          <p class="text-secondary small mb-0">
-            Stateful 3-Page Context Window <span class="mono text-info">[Page N−1 + Label, Page N, Page N+1]</span> with Fault Isolation
+          <h1 class="display-4 fw-extrabold gradient-title mb-3">
+            Never Lose Document Continuity Across Page Boundaries.
+          </h1>
+          <p class="lead text-secondary mx-auto mb-4" style="max-width: 740px;">
+            Isolated per-page LLM calls misclassify continuation pages (like invoice line items on Page 5 missing the header from Page 4). Our engine classifies every page using a stateful <strong>3-page sliding window</strong> <span class="mono text-info">[Page N−1 + Label, Page N, Page N+1]</span>.
           </p>
         </div>
       </div>
 
-      <!-- Playback & Chaos Controls -->
-      <div class="d-flex flex-wrap align-items-center gap-2">
-        <div class="d-flex align-items-center gap-2 me-2 px-3 py-1 rounded-pill"
-             style="background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08);">
-          <span class="status-dot" id="engineStatusDot"></span>
-          <span class="small mono text-light" id="engineStatusText">STREAMING WINDOW</span>
-        </div>
+      <!-- Interactive Live Stage Card -->
+      <div class="glass-card p-4 p-lg-5 reveal visible">
 
-        <button class="btn btn-sm btn-glass-cyan d-flex align-items-center gap-1" id="btnPlayPause">
-          <i class="bi bi-pause-fill" id="playPauseIcon"></i>
-          <span id="playPauseLabel">Pause</span>
-        </button>
-
-        <button class="btn btn-sm btn-glass" id="btnStepPrev" title="Previous Page">
-          <i class="bi bi-chevron-left"></i>
-        </button>
-        <button class="btn btn-sm btn-glass" id="btnStepNext" title="Step Next Page">
-          <i class="bi bi-chevron-right"></i>
-        </button>
-
-        <button class="btn btn-sm btn-glass d-flex align-items-center gap-1 border-danger-subtle text-danger-emphasis"
-                id="btnInjectFault" title="Inject API Timeout / Malformed JSON on Current Target Page">
-          <i class="bi bi-lightning-charge"></i>
-          <span>Simulate API Failure</span>
-        </button>
-
-        <div class="btn-group btn-group-sm ms-1" role="group">
-          <button type="button" class="btn btn-glass active speed-btn" data-speed="2400">1x</button>
-          <button type="button" class="btn btn-glass speed-btn" data-speed="1200">2x</button>
-        </div>
-      </div>
-    </header>
-
-    <!-- TOP TELEMETRY BAR (Observed Demo Run Metrics) -->
-    <section class="row g-3 mb-4">
-      <div class="col-6 col-md-3">
-        <div class="glass-panel p-3 h-100">
-          <div class="d-flex justify-content-between align-items-center text-secondary small mb-1">
-            <span>ACTIVE WINDOW POSITION</span>
-            <i class="bi bi-Bounded-context text-info"></i>
-          </div>
-          <div class="metric-value mono text-info" id="metricPageCounter">Page 1 / 16</div>
-          <div class="small text-secondary mt-1" id="metricBoundaryState">
-            Boundary: <span class="mono text-warning">prev = null</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-6 col-md-3">
-        <div class="glass-panel p-3 h-100">
-          <div class="d-flex justify-content-between align-items-center text-secondary small mb-1">
-            <span>CARRIED STATE (N−1 → N)</span>
-            <i class="bi bi-arrow-repeat text-primary"></i>
-          </div>
-          <div class="metric-value mono" id="metricCarriedLabel">null</div>
-          <div class="small text-secondary mt-1">
-            Passed into <span class="mono">previous_page.predicted_label</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-6 col-md-3">
-        <div class="glass-panel p-3 h-100">
-          <div class="d-flex justify-content-between align-items-center text-secondary small mb-1">
-            <span>EVALUATION VS GROUND TRUTH</span>
-            <i class="bi bi-check2-circle text-success"></i>
-          </div>
-          <div class="metric-value mono text-success" id="metricAccuracy">16 / 16 (100%)</div>
-          <div class="small text-secondary mt-1">
-            Synthetic bundle (<span class="mono">demo_data.py</span>)
-          </div>
-        </div>
-      </div>
-
-      <div class="col-6 col-md-3">
-        <div class="glass-panel p-3 h-100">
-          <div class="d-flex justify-content-between align-items-center text-secondary small mb-1">
-            <span>TOKEN & LATENCY FOOTPRINT</span>
-            <i class="bi bi-speedometer2 text-warning"></i>
-          </div>
-          <div class="metric-value mono" id="metricTokens">~890 tok</div>
-          <div class="small text-secondary mt-1" id="metricLatency">
-            ~6 completion tok • ~1.6s / call
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 16-PAGE CONTINUOUS SLIDING WINDOW RIBBON -->
-    <section class="glass-panel p-3 px-4 mb-4">
-      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-        <div class="d-flex align-items-center gap-2">
-          <span class="fw-semibold small text-uppercase tracking-wider text-secondary">
-            <i class="bi bi-collection me-1 text-info"></i>16-Page Synthetic Procurement Bundle (<span class="mono text-light">demo_data.py</span>)
-          </span>
-          <span class="small text-secondary d-none d-md-inline">
-            — Click any page card to jump or click "Simulate API Failure" to test <span class="mono text-danger-emphasis">UNKNOWN</span> state propagation
-          </span>
-        </div>
-        <div class="d-flex align-items-center gap-3 small">
-          <span><span class="window-tag tag-prev me-1">N−1</span>Prev Context + Label</span>
-          <span><span class="window-tag tag-target me-1">Page N</span>Target Classified</span>
-          <span><span class="window-tag tag-next me-1">N+1</span>Next Lookahead</span>
-        </div>
-      </div>
-
-      <div class="page-ribbon-wrapper" id="ribbonScrollContainer">
-        <div class="page-ribbon" id="pageRibbon">
-          <!-- Populated dynamically by JS -->
-        </div>
-      </div>
-    </section>
-
-    <!-- MAIN STAGE: 3-PAGE WINDOW INSPECTOR + REAL-TIME ORCHESTRATION FLOW -->
-    <section class="row g-4 mb-4">
-      <!-- Left 8 cols: The 3-Page Sliding Context Inspector -->
-      <div class="col-12 col-xl-8">
-        <div class="glass-panel p-4 h-100 d-flex flex-column justify-content-between">
+        <!-- Stage Top Control Bar -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pb-4 mb-4 border-bottom border-secondary border-opacity-25">
           <div>
-            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle mono">ClassifyDocument()</span>
+              <h2 class="h5 fw-bold mb-0">Live 16-Page Procurement Bundle Simulator (<span class="mono text-info">demo_data.py</span>)</h2>
+            </div>
+            <p class="text-secondary small mb-0 mt-1">
+              Click any page on the track below or inject a live API failure to inspect state propagation in real time.
+            </p>
+          </div>
+
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <button class="btn-glass-action" id="btnPrev" title="Step Backward"><i class="bi bi-chevron-left"></i></button>
+            <button class="btn-glass-action" id="btnPlayPause">
+              <i class="bi bi-pause-fill me-1" id="playIcon"></i><span id="playText">Pause Stream</span>
+            </button>
+            <button class="btn-glass-action" id="btnNext" title="Step Forward"><i class="bi bi-chevron-right"></i></button>
+            <button class="btn-glass-action border-danger-subtle text-danger-emphasis ms-md-2" id="btnBreak">
+              <i class="bi bi-lightning-charge-fill me-1"></i><span id="breakText">Simulate Failure on Page 1</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 16-Page Interactive Ribbon -->
+        <div class="mb-4">
+          <div class="d-flex flex-wrap justify-content-between align-items-center small text-secondary mb-2 px-1">
+            <span class="mono">ACTIVE WINDOW: <strong class="text-white" id="windowRangeLabel">[ null , Page 1 , Page 2 ]</strong></span>
+            <div class="d-flex gap-4 mono" style="font-size: 0.75rem;">
+              <span><i class="bi bi-circle-fill me-1" style="color:var(--indigo);font-size:0.55rem;"></i>Page N−1 (Prev + Label)</span>
+              <span><i class="bi bi-circle-fill me-1" style="color:var(--cyan);font-size:0.55rem;"></i>Page N (Target)</span>
+              <span><i class="bi bi-circle-fill me-1" style="color:var(--amber);font-size:0.55rem;"></i>Page N+1 (Lookahead)</span>
+            </div>
+          </div>
+          <div class="page-track" id="pageTrack"></div>
+        </div>
+
+        <!-- 3-Page Sliding Window Cards + Animated Beams -->
+        <div class="row g-4 align-items-stretch mb-4">
+
+          <!-- PAGE N-1 -->
+          <div class="col-12 col-lg-3">
+            <div class="stage-window-card stage-prev">
               <div>
-                <h2 class="h6 fw-bold mb-0 d-flex align-items-center gap-2">
-                  <i class="bi bi-window-split text-info"></i>
-                  Real-Time Three-Page Sliding Window Context
-                </h2>
-                <p class="text-secondary small mb-0">
-                  The LLM classifies <strong>only Page N</strong> using neighbor pages solely as continuation evidence.
-                </p>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span class="pill-badge pill-indigo mono">Page N−1</span>
+                  <span class="mono small text-secondary" id="prevPageHeader">null</span>
+                </div>
+                <div class="doc-box mono" id="prevPageText"></div>
               </div>
-              <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle mono" id="continuityInsightBadge">
-                Continuity Signal Active
-              </span>
+              <div class="d-flex justify-content-between align-items-center pt-3 mt-3 border-top border-secondary border-opacity-25">
+                <span class="small text-secondary">Carried Label:</span>
+                <span class="pill-badge mono" id="prevCarriedBadge">null</span>
+              </div>
             </div>
+          </div>
 
-            <!-- 3 Window Columns -->
+          <!-- STREAM BEAM 1 -->
+          <div class="col-12 col-lg-1 d-none d-lg-flex">
+            <div class="stream-connector w-100">
+              <span class="mono text-secondary" style="font-size:0.68rem;">State</span>
+              <div class="stream-beam"></div>
+              <i class="bi bi-arrow-right text-info fs-5"></i>
+            </div>
+          </div>
+
+          <!-- TARGET PAGE N -->
+          <div class="col-12 col-lg-4">
+            <div class="stage-window-card stage-target">
+              <div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span class="pill-badge pill-cyan mono"><i class="bi bi-bullseye"></i> Target Page N</span>
+                  <span class="mono small text-info fw-bold" id="targetPageHeader">Page 1 of 16</span>
+                </div>
+                <div class="doc-box mono" id="targetPageText"></div>
+              </div>
+              <div class="d-flex justify-content-between align-items-center pt-3 mt-3 border-top border-info border-opacity-25">
+                <span class="small text-info-emphasis fw-semibold">Validated Output:</span>
+                <span class="pill-badge pill-emerald mono" id="targetOutputBadge">{"label": "Other"}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- STREAM BEAM 2 -->
+          <div class="col-12 col-lg-1 d-none d-lg-flex">
+            <div class="stream-connector w-100">
+              <span class="mono text-secondary" style="font-size:0.68rem;">Lookahead</span>
+              <div class="stream-beam"></div>
+              <i class="bi bi-arrow-left text-warning fs-5"></i>
+            </div>
+          </div>
+
+          <!-- PAGE N+1 -->
+          <div class="col-12 col-lg-3">
+            <div class="stage-window-card stage-next">
+              <div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span class="pill-badge pill-amber mono">Page N+1</span>
+                  <span class="mono small text-secondary" id="nextPageHeader">Page 2</span>
+                </div>
+                <div class="doc-box mono" id="nextPageText"></div>
+              </div>
+              <div class="d-flex justify-content-between align-items-center pt-3 mt-3 border-top border-secondary border-opacity-25">
+                <span class="small text-secondary">Context Role:</span>
+                <span class="mono small text-warning">Supporting Text Only</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Live Step Explanation + stdout JSON Bar -->
+        <div class="p-3 p-lg-4 rounded-4 d-flex flex-wrap align-items-center justify-content-between gap-3"
+             style="background: rgba(4, 8, 19, 0.75); border: 1px solid rgba(56, 189, 248, 0.25);">
+          <div class="d-flex align-items-center gap-3">
+            <div class="p-3 rounded-3 d-flex align-items-center justify-content-center"
+                 style="background: rgba(56, 189, 248, 0.14); border: 1px solid rgba(56, 189, 248, 0.35);">
+              <i class="bi bi-cpu-fill text-info fs-4"></i>
+            </div>
+            <div>
+              <div class="fw-bold text-white mb-1" id="liveReasonTitle">Page 1 Reasoning</div>
+              <div class="text-secondary small" id="liveReasonBody">...</div>
+            </div>
+          </div>
+
+          <div class="mono small px-3 py-2 rounded-3"
+               style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--glass-border);"
+               id="liveStdoutObject">
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       SECTION 2: SYSTEM ARCHITECTURE & ORCHESTRATION STRATEGY
+       =================================================================== -->
+  <section id="architecture">
+    <div class="container-xl">
+      <div class="row justify-content-center text-center mb-5 reveal">
+        <div class="col-12 col-lg-8">
+          <div class="section-eyebrow mono"><i class="bi bi-diagram-3"></i> Deliverable 1 & 2 • Architecture</div>
+          <h2 class="display-6 fw-bold mb-3">Built for Fault-Tolerant Sequential State</h2>
+          <p class="text-secondary">
+            Designed in <span class="mono text-light">classifier.py</span> and <span class="mono text-light">design.md</span> to handle multi-page boundaries, transient API failures, and strict allow-list validation without halting batch jobs.
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-4 reveal">
+        <div class="col-12 col-md-6 col-lg-3">
+          <div class="glass-card glass-card-hover p-4 h-100">
+            <div class="p-3 rounded-3 d-inline-flex mb-3" style="background:rgba(56,189,248,0.14);color:var(--cyan);">
+              <i class="bi bi-arrow-repeat fs-4"></i>
+            </div>
+            <h3 class="h5 fw-bold mb-2">1. State Carry-Forward</h3>
+            <p class="text-secondary small mb-0">
+              Page <span class="mono text-light">N</span> receives the validated classification of Page <span class="mono text-light">N−1</span> alongside its extracted text, resolving multi-page invoices and contracts that lack repeated headers.
+            </p>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3">
+          <div class="glass-card glass-card-hover p-4 h-100">
+            <div class="p-3 rounded-3 d-inline-flex mb-3" style="background:rgba(129,140,248,0.14);color:var(--indigo);">
+              <i class="bi bi-bounding-box-circles fs-4"></i>
+            </div>
+            <h3 class="h5 fw-bold mb-2">2. Boundary Guards</h3>
+            <p class="text-secondary small mb-0">
+              Page 1 has no previous neighbor (<span class="mono text-light">previous_page: null</span>) and the final page has no next neighbor (<span class="mono text-light">next_page: null</span>). Payloads truncate cleanly at <span class="mono text-light">MAX_PAGE_CHARS=12000</span>.
+            </p>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3">
+          <div class="glass-card glass-card-hover p-4 h-100">
+            <div class="p-3 rounded-3 d-inline-flex mb-3" style="background:rgba(251,113,133,0.14);color:var(--rose);">
+              <i class="bi bi-shield-exclamation fs-4"></i>
+            </div>
+            <h3 class="h5 fw-bold mb-2">3. <span class="mono">UNKNOWN</span> Fault Isolation</h3>
+            <p class="text-secondary small mb-0">
+              If Page 45 fails after <span class="mono text-light">MAX_RETRIES=2</span>, it emits <span class="mono text-light">label: null, status: "failed"</span>. Page 46 still receives Page 45's text, but <span class="mono text-warning">predicted_label: "UNKNOWN"</span>—never poisoning downstream context with <span class="mono">Other</span>.
+            </p>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3">
+          <div class="glass-card glass-card-hover p-4 h-100">
+            <div class="p-3 rounded-3 d-inline-flex mb-3" style="background:rgba(52,211,153,0.14);color:var(--emerald);">
+              <i class="bi bi-check2-all fs-4"></i>
+            </div>
+            <h3 class="h5 fw-bold mb-2">4. Allow-List Validation</h3>
+            <p class="text-secondary small mb-0">
+              Malformed JSON, wrong schema shapes, or hallucinated labels outside <span class="mono text-light">{Invoice, Purchase Order, Contract, Appendix, Other}</span> automatically trigger backoff retries.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       SECTION 3: LIVE PROMPT & JSON PAYLOAD INSPECTOR (`prompt.md`)
+       =================================================================== -->
+  <section id="prompt">
+    <div class="container-xl">
+      <div class="row justify-content-center text-center mb-5 reveal">
+        <div class="col-12 col-lg-8">
+          <div class="section-eyebrow mono"><i class="bi bi-braces-asterisk"></i> Deliverable 3 • Prompt & Schema Design</div>
+          <h2 class="display-6 fw-bold mb-3">Live Synchronized Prompt & Payload Inspector</h2>
+          <p class="text-secondary">
+            Watch the exact JSON request payload sent to <span class="mono text-light">classifier.CallOpenRouter</span> (<span class="mono">POST /chat/completions</span>) update dynamically as the simulator above moves across pages.
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-4 reveal">
+        <!-- System Prompt & Response Schema -->
+        <div class="col-12 col-lg-5">
+          <div class="code-window h-100">
+            <div class="code-window-header">
+              <div class="d-flex align-items-center gap-2">
+                <div class="window-dots">
+                  <span style="background:#fb7185;"></span>
+                  <span style="background:#fbbf24;"></span>
+                  <span style="background:#34d399;"></span>
+                </div>
+                <span class="mono small text-secondary ms-2">prompt.md — System Prompt & Contract</span>
+              </div>
+              <span class="badge bg-dark border border-secondary-subtle mono">Strict Allow-List</span>
+            </div>
+            <div class="code-body mono">
+              <div class="text-info fw-semibold mb-2"># System Prompt Constraints</div>
+              <p class="text-secondary small mb-3">
+                You are a document page classifier. Classify <strong>ONLY</strong> <span class="text-white">target_page</span> into exactly one allowed label:
+                <br/><span class="text-success">"Invoice" | "Purchase Order" | "Contract" | "Appendix" | "Other"</span>
+              </p>
+              <p class="text-secondary small mb-3">
+                1. Use <span class="text-white">previous_page</span> (text + <span class="text-white">predicted_label</span>) and <span class="text-white">next_page</span> (text) <strong>solely as supporting evidence</strong> for multi-page continuations.<br/>
+                2. Never classify neighbor pages.<br/>
+                3. If <span class="text-warning">predicted_label == "UNKNOWN"</span>, rely on the raw text of <span class="text-white">previous_page</span>.<br/>
+                4. Respond strictly with valid JSON:
+              </p>
+              <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);">
+                <span class="j-key">"response_schema"</span>: {<br/>
+                &nbsp;&nbsp;<span class="j-key">"label"</span>: <span class="j-str">"Invoice | Purchase Order | Contract | Appendix | Other"</span><br/>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Synchronized Request Payload -->
+        <div class="col-12 col-lg-7">
+          <div class="code-window h-100">
+            <div class="code-window-header">
+              <div class="d-flex align-items-center gap-2">
+                <div class="window-dots">
+                  <span style="background:#fb7185;"></span>
+                  <span style="background:#fbbf24;"></span>
+                  <span style="background:#34d399;"></span>
+                </div>
+                <span class="mono small text-secondary ms-2" id="payloadWindowTitle">POST /v1/chat/completions — Active Page 1 Payload</span>
+              </div>
+              <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle mono">OpenRouter / Cloudflare Workers AI</span>
+            </div>
+            <pre class="code-body mono" id="livePayloadPre"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       SECTION 4: EVALUATION BENCHMARK & QUICK START
+       =================================================================== -->
+  <section id="quickstart" class="pb-5">
+    <div class="container-xl">
+      <div class="glass-card p-4 p-lg-5 reveal">
+        <div class="row g-5 align-items-center">
+
+          <!-- Left Column: Observed Benchmark Metrics -->
+          <div class="col-12 col-lg-6">
+            <div class="section-eyebrow mono"><i class="bi bi-bar-chart-line"></i> Observed Benchmark (main.py)</div>
+            <h2 class="h2 fw-bold mb-3">16 / 16 Ground-Truth Match on Synthetic Bundle</h2>
+            <p class="text-secondary mb-4">
+              End-to-end evaluation with <span class="mono text-light">openai/gpt-4o-mini</span> via OpenRouter (or drop-in swap to Cloudflare Workers AI via <span class="mono text-light">OPENROUTER_BASE_URL</span>) across continuation pages, PO/contract/appendix boundaries, and standalone sheets.
+            </p>
+
             <div class="row g-3">
-              <!-- N-1 Card -->
-              <div class="col-12 col-md-4">
-                <div class="slot-card slot-prev">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="window-tag tag-prev mono">PAGE N−1 (PREV)</span>
-                    <span class="mono small text-secondary" id="slotPrevPageNum">null</span>
-                  </div>
-                  <div class="mb-2 d-flex align-items-center justify-content-between">
-                    <span class="small text-secondary">Carried Label:</span>
-                    <span class="label-pill mono" id="slotPrevLabel">null</span>
-                  </div>
-                  <div class="doc-snippet mono" id="slotPrevText"></div>
+              <div class="col-6">
+                <div class="p-3 rounded-4" style="background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);">
+                  <div class="text-secondary small">Ground Truth Accuracy</div>
+                  <div class="h3 fw-bold text-success mono mb-0 mt-1">16 / 16</div>
+                  <div class="small text-secondary mt-1">100% matched_count</div>
                 </div>
               </div>
-
-              <!-- Target N Card -->
-              <div class="col-12 col-md-4">
-                <div class="slot-card slot-target">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="window-tag tag-target mono">TARGET PAGE N</span>
-                    <span class="mono small text-info fw-bold" id="slotTargetPageNum">Page 1</span>
-                  </div>
-                  <div class="mb-2 d-flex align-items-center justify-content-between">
-                    <span class="small text-info-emphasis">Predicted Label:</span>
-                    <span class="label-pill mono" id="slotTargetLabel">Invoice</span>
-                  </div>
-                  <div class="doc-snippet mono" id="slotTargetText"></div>
+              <div class="col-6">
+                <div class="p-3 rounded-4" style="background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);">
+                  <div class="text-secondary small">Prompt Token Footprint</div>
+                  <div class="h3 fw-bold text-info mono mb-0 mt-1">700–1,090</div>
+                  <div class="small text-secondary mt-1">~5–6 completion tokens</div>
                 </div>
               </div>
-
-              <!-- N+1 Card -->
-              <div class="col-12 col-md-4">
-                <div class="slot-card slot-next">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="window-tag tag-next mono">PAGE N+1 (NEXT)</span>
-                    <span class="mono small text-secondary" id="slotNextPageNum">Page 2</span>
+              <div class="col-6">
+                <div class="p-3 rounded-4" style="background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);">
+                  <div class="text-secondary small">Per-Page Latency</div>
+                  <div class="h3 fw-bold text-white mono mb-0 mt-1">1.2–2.3s</div>
+                  <div class="small text-secondary mt-1">~30s total wall time (16p)</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="p-3 rounded-4" style="background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);">
+                  <div class="text-secondary small">Deliverable Files</div>
+                  <div class="small mono text-light mt-2">
+                    design.md • prompt.md<br/>classifier.py • test_classifier.py
                   </div>
-                  <div class="mb-2 d-flex align-items-center justify-content-between">
-                    <span class="small text-secondary">Role:</span>
-                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle mono" style="font-size:0.65rem;">
-                      Lookahead Text Only
-                    </span>
-                  </div>
-                  <div class="doc-snippet mono" id="slotNextText"></div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Why Single-Page Fails vs Why Sliding Window Succeeds Callout -->
-          <div class="mt-3 p-3 rounded-3 d-flex align-items-start gap-3"
-               style="background: rgba(56, 189, 248, 0.07); border: 1px solid rgba(56, 189, 248, 0.22);">
-            <i class="bi bi-lightbulb-fill text-info fs-5 mt-1"></i>
-            <div class="small">
-              <div class="fw-semibold text-light mb-1" id="explainHeadline">
-                Why Sliding Window Context Matters on This Page:
+          <!-- Right Column: Quick Start Commands -->
+          <div class="col-12 col-lg-6">
+            <div class="code-window">
+              <div class="code-window-header">
+                <span class="mono small text-secondary"><i class="bi bi-terminal me-2 text-info"></i>Quick Start (Python 3.12+)</span>
+                <span class="mono small text-success">uv / unittest</span>
               </div>
-              <div class="text-secondary" id="explainDescription">
-                Loading explanation...
-              </div>
+              <pre class="code-body mono mb-0"><span class="text-secondary"># 1. Install dependencies & configure environment</span>
+<span class="text-info">cd</span> sliding_window_document_classifier
+<span class="text-info">uv sync</span>
+<span class="text-info">cp</span> .env.example .env
+
+<span class="text-secondary"># 2. Run 16-page demo bundle (stdout: JSON, stderr: logs + eval)</span>
+<span class="text-info">uv run</span> main.py 2&gt;run.log
+
+<span class="text-secondary"># 3. Run offline unit test suite (no API key required)</span>
+<span class="text-info">uv run</span> python -m unittest -v
+
+<span class="text-secondary"># Programmatic API</span>
+<span class="j-key">from</span> classifier <span class="j-key">import</span> ClassifyDocument
+results = ClassifyDocument(page_texts=[...], document_id=<span class="j-str">"doc-001"</span>)</pre>
             </div>
           </div>
+
         </div>
       </div>
+    </div>
+  </section>
 
-      <!-- Right 4 cols: Live Orchestration State Machine (`classifier.py`) -->
-      <div class="col-12 col-xl-4">
-        <div class="glass-panel p-4 h-100 d-flex flex-column justify-content-between">
-          <div>
-            <h2 class="h6 fw-bold mb-1 d-flex align-items-center gap-2">
-              <i class="bi bi-diagram-3 text-info"></i>
-              Orchestration Pipeline (<span class="mono">classifier.py</span>)
-            </h2>
-            <p class="text-secondary small mb-3">
-              Sequential state machine with retry & failure isolation
-            </p>
-
-            <!-- Stage 1 -->
-            <div class="pipeline-stage" id="stageAssemble">
-              <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-semibold small"><i class="bi bi-sliders me-2 text-info"></i>1. Assemble Window & Truncate</span>
-                <span class="mono small text-secondary">MAX_PAGE_CHARS=12000</span>
-              </div>
-              <div class="small text-secondary mt-1" id="stageAssembleDesc">
-                Injects <span class="mono">prev_label</span> + boundary <span class="mono">null</span> guards.
-              </div>
-            </div>
-
-            <div class="flow-connector"></div>
-
-            <!-- Stage 2 -->
-            <div class="pipeline-stage" id="stageCallLLM">
-              <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-semibold small"><i class="bi bi-cloud-arrow-up me-2 text-primary"></i>2. <span class="mono">classifier.CallOpenRouter</span></span>
-                <span class="mono badge bg-dark border border-secondary-subtle" id="stageAttemptsBadge">attempt: 1/3</span>
-              </div>
-              <div class="small text-secondary mt-1">
-                <span class="mono">POST /v1/chat/completions</span> (OpenRouter or Cloudflare Workers AI compatibility layer)
-              </div>
-            </div>
-
-            <div class="flow-connector"></div>
-
-            <!-- Stage 3 -->
-            <div class="pipeline-stage" id="stageValidate">
-              <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-semibold small"><i class="bi bi-shield-check me-2 text-success"></i>3. Output Schema Validation</span>
-                <span class="mono small text-success" id="stageValidateStatus">{"label": "..."}</span>
-              </div>
-              <div class="small text-secondary mt-1">
-                Enforces strict JSON + allow-list: <span class="mono">Invoice | Purchase Order | Contract | Appendix | Other</span>
-              </div>
-            </div>
-
-            <div class="flow-connector"></div>
-
-            <!-- Stage 4 -->
-            <div class="pipeline-stage" id="stageCarryState">
-              <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-semibold small"><i class="bi bi-arrow-return-right me-2 text-warning"></i>4. State Carry-Forward to Page N+1</span>
-                <span class="mono badge bg-info-subtle text-info-emphasis" id="stageCarryBadge">State → N+1</span>
-              </div>
-              <div class="small text-secondary mt-1" id="stageCarryDesc">
-                On failure: outputs <span class="mono text-danger-emphasis">label: null, status: "failed"</span> and passes <span class="mono text-warning">predicted_label: "UNKNOWN"</span> to Page N+1.
-              </div>
-            </div>
-          </div>
-
-          <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center small text-secondary">
-            <span>Timeout: <span class="mono text-light">45s</span></span>
-            <span>Retries: <span class="mono text-light">MAX_RETRIES=2</span></span>
-            <span>Temp: <span class="mono text-light">0.0</span></span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- LIVE PAYLOAD & STDOUT / STDERR CONSOLES -->
-    <section class="row g-4 mb-4">
-      <!-- Live LLM Request Payload (prompt.md) -->
-      <div class="col-12 col-lg-6">
-        <div class="glass-panel p-4 h-100">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-              <h3 class="h6 fw-bold mb-0 d-flex align-items-center gap-2">
-                <i class="bi bi-braces-asterisk text-info"></i>
-                Live LLM Request Payload (<span class="mono">prompt.md</span>)
-              </h3>
-              <p class="text-secondary small mb-0">
-                Real-time JSON sent to <span class="mono">POST /chat/completions</span> for the active page
-              </p>
-            </div>
-            <span class="badge bg-dark border border-secondary-subtle mono">openai/gpt-4o-mini</span>
-          </div>
-          <pre class="code-console mono mb-0" id="payloadConsole"></pre>
-        </div>
-      </div>
-
-      <!-- Dual Stream Output: stdout (Results JSON) + stderr (Structured Logs & Evaluation) -->
-      <div class="col-12 col-lg-6">
-        <div class="glass-panel p-4 h-100">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-              <h3 class="h6 fw-bold mb-0 d-flex align-items-center gap-2">
-                <i class="bi bi-terminal text-success"></i>
-                Live Output Streams (<span class="mono">stdout</span> & <span class="mono">stderr</span>)
-              </h3>
-              <p class="text-secondary small mb-0">
-                Per-page result objects on <span class="mono">stdout</span> + evaluation summary on <span class="mono">stderr</span>
-              </p>
-            </div>
-            <ul class="nav nav-pills nav-fill gap-1" id="consoleTabGroup">
-              <li class="nav-item">
-                <button class="btn btn-sm btn-glass-cyan py-1 px-2 mono" id="tabBtnStdout">stdout (JSON)</button>
-              </li>
-              <li class="nav-item">
-                <button class="btn btn-sm btn-glass py-1 px-2 mono" id="tabBtnStderr">stderr (Logs + Eval)</button>
-              </li>
-            </ul>
-          </div>
-          <pre class="code-console mono mb-0" id="outputStreamConsole"></pre>
-        </div>
-      </div>
-    </section>
-
-    <!-- REPOSITORY DELIVERABLES & CONFIGURATION FOOTER -->
-    <section class="row g-4">
-      <div class="col-12 col-lg-7">
-        <div class="glass-panel p-4 h-100">
-          <h3 class="h6 fw-bold mb-3 d-flex align-items-center gap-2">
-            <i class="bi bi-folder2-open text-info"></i>
-            Repository Map & Assessment Deliverables
-          </h3>
-          <div class="table-responsive">
-            <table class="table table-dark table-borderless align-middle small mb-0" style="--bs-table-bg: transparent;">
-              <thead class="text-secondary border-bottom border-secondary border-opacity-25">
-                <tr>
-                  <th>Deliverable</th>
-                  <th>Location</th>
-                  <th>Key Responsibility</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="fw-medium">System Design, Latency & Cost</td>
-                  <td><span class="file-chip mono"><i class="bi bi-file-earmark-text text-info"></i>design.md</span></td>
-                  <td class="text-secondary">100-page latency extrapolation, speculative chunking, token cost analysis</td>
-                </tr>
-                <tr>
-                  <td class="fw-medium">Prompt, Payload & Schema</td>
-                  <td><span class="file-chip mono"><i class="bi bi-file-earmark-code text-primary"></i>prompt.md</span></td>
-                  <td class="text-secondary">System prompt guardrails, target isolation, <span class="mono">{"label": "…"}</span> schema</td>
-                </tr>
-                <tr>
-                  <td class="fw-medium">Orchestration Engine</td>
-                  <td><span class="file-chip mono"><i class="bi bi-cpu text-success"></i>classifier.py</span></td>
-                  <td class="text-secondary"><span class="mono">ClassifyDocument()</span>, state carry-forward, retries, <span class="mono">UNKNOWN</span> fallback</td>
-                </tr>
-                <tr>
-                  <td class="fw-medium">Demo Runner & Ground Truth</td>
-                  <td><span class="file-chip mono"><i class="bi bi-play-btn text-warning"></i>main.py / demo_data.py</span></td>
-                  <td class="text-secondary">16-page procurement bundle evaluation (<span class="mono">16/16 matched</span>)</td>
-                </tr>
-                <tr>
-                  <td class="fw-medium">Offline Unit Test Suite</td>
-                  <td><span class="file-chip mono"><i class="bi bi-check2-square text-info"></i>test_classifier.py</span></td>
-                  <td class="text-secondary">Deterministic tests (no API key): boundaries, malformed JSON, retries</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-12 col-lg-5">
-        <div class="glass-panel p-4 h-100 d-flex flex-column justify-content-between">
-          <div>
-            <h3 class="h6 fw-bold mb-3 d-flex align-items-center gap-2">
-              <i class="bi bi-sliders2-vertical text-warning"></i>
-              Quick Start & Provider Swap (OpenRouter ↔ Cloudflare AI)
-            </h3>
-            <div class="p-3 rounded-3 mono small mb-3" style="background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.07);">
-              <div class="text-secondary"># Option A — uv (Python 3.12+)</div>
-              <div class="text-info">uv sync && cp .env.example .env</div>
-              <div class="text-light">uv run main.py 2&gt;run.log</div>
-              <div class="text-success">uv run python -m unittest -v</div>
-            </div>
-            <p class="small text-secondary mb-0">
-              <strong>Zero-Code Provider Swap:</strong> <span class="mono text-light">classifier.CallOpenRouter</span> uses the standard OpenAI-compatible <span class="mono">/chat/completions</span> contract. Point <span class="mono">OPENROUTER_BASE_URL</span> and <span class="mono">OPENROUTER_API_KEY</span> to your Cloudflare Workers AI endpoint to run natively on edge GPUs.
-            </p>
-          </div>
-          <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex flex-wrap gap-2">
-            <span class="badge bg-dark border border-secondary-subtle mono">OPENROUTER_API_KEY</span>
-            <span class="badge bg-dark border border-secondary-subtle mono">OPENROUTER_MODEL</span>
-            <span class="badge bg-dark border border-secondary-subtle mono">MAX_RETRIES=2</span>
-            <span class="badge bg-dark border border-secondary-subtle mono">MAX_PAGE_CHARS=12000</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </div>
-
-  <!-- Bootstrap JS + Interactive Simulation Engine -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    /**
-     * 16-Page Synthetic Procurement Bundle (`demo_data.py`)
-     * Mirrors the exact real-world scenarios described in the README:
-     * - Multi-page Invoice continuations (line items without repeated header)
-     * - Purchase Order & Continuation
-     * - Multi-page Master Services Contract + Signature Page
-     * - Technical Appendix pages
-     * - Separate Invoice, Cover Email & Routing Sheet (Other)
-     */
-    const DEMO_PAGES = [
-      {
-        page: 1,
-        expected: "Other",
-        tokens: 710,
-        latency: "1.34s",
-        text: "INTERNAL ROUTING SLIP & COVER MEMO\nTo: Accounts Payable & Legal Review\nFrom: Global Procurement Desk\nDate: October 2026\nSubject: Q4 Vendor Packet #PKT-8841 (Contains PO, MSA Contract, Exhibits, and Invoices).",
-        why: "First page boundary: previous_page is null. Classified as 'Other' (routing sheet) while Page 2 lookahead shows a Purchase Order starting next."
-      },
-      {
-        page: 2,
-        expected: "Purchase Order",
-        tokens: 845,
-        latency: "1.52s",
-        text: "PURCHASE ORDER #PO-2026-9920\nVendor: Apex Cloud Infrastructure Inc.\nShip To: North America Data Center #4\nPayment Terms: Net 30\nItem 1: Enterprise GPU Rack Units (Qty: 8) — $140,000.00\nContinued on Page 2 of PO...",
-        why: "Clear Purchase Order header. Carries 'Other' from Page 1 and establishes 'Purchase Order' state for Page 3."
-      },
-      {
-        page: 3,
-        expected: "Purchase Order",
-        tokens: 910,
-        latency: "1.68s",
-        text: "Line 2: High-Speed Optical Interconnect Cables (Qty: 40) — $12,400.00\nLine 3: Onsite Rack Commissioning Service — $8,500.00\n----------------------------------------\nPO SUBTOTAL: $160,900.00\nAuthorized Buyer Signature: J. Reynolds",
-        why: "CRITICAL CONTINUATION: Page 3 has no 'PURCHASE ORDER' title—only line items 2–3 and a buyer signature. Isolated per-page classification often mislabels this as 'Invoice', but seeing Page 2's predicted_label='Purchase Order' locks in the right label."
-      },
-      {
-        page: 4,
-        expected: "Invoice",
-        tokens: 890,
-        latency: "1.45s",
-        text: "TAX INVOICE #INV-88410-A\nBilled To: Global Procurement Desk\nRemit To: Apex Cloud Infrastructure Inc.\nReference PO: #PO-2026-9920\nLine 1: Milestone 1 Hardware Delivery — $80,000.00\nLine 2: Freight & Customs Handling — $3,200.00\n(Continued on next page)",
-        why: "Document boundary transition from Purchase Order (Page 3) to a new Tax Invoice on Page 4."
-      },
-      {
-        page: 5,
-        expected: "Invoice",
-        tokens: 940,
-        latency: "1.71s",
-        text: "Line 3: Extended 24/7 Hardware Warranty (Q4) — $9,400.00\nLine 4: Rack Rail Mounting Kit — $1,150.00\nSubtotal: $93,750.00\nSales Tax (8.25%): $7,734.38\nTOTAL AMOUNT DUE THIS INVOICE: $101,484.38\nPlease remit via ACH within 30 days.",
-        why: "CANONICAL PROBLEM CASE: Page 5 has raw line items and totals without an Invoice header. The sliding window passes Page 4 text + predicted_label='Invoice', ensuring 100% accuracy."
-      },
-      {
-        page: 6,
-        expected: "Contract",
-        tokens: 1020,
-        latency: "1.89s",
-        text: "MASTER SERVICES AGREEMENT (MSA-2026-04)\nThis Master Services Agreement ('Agreement') is entered into by and between Buyer and Apex Cloud Infrastructure Inc.\n1. DEFINITIONS AND SCOPE OF SERVICES\n1.1 Provider shall deliver managed infrastructure in accordance with the SLAs.",
-        why: "Sharp transition from Invoice (Page 5) into a multi-page legal Contract (Page 6)."
-      },
-      {
-        page: 7,
-        expected: "Contract",
-        tokens: 1085,
-        latency: "1.94s",
-        text: "4. INDEMNIFICATION AND LIMITATION OF LIABILITY\n4.1 Neither party's aggregate liability shall exceed twelve (12) months of fees paid.\n5. CONFIDENTIALITY AND DATA PROTECTION\n5.2 Both parties shall comply with SOC2 Type II security controls.",
-        why: "Middle body of a contract with numbered clauses (4.1, 5.2). Continuity from Page 6 ('Contract') + Page 8 signature lookahead keeps classification stable."
-      },
-      {
-        page: 8,
-        expected: "Contract",
-        tokens: 860,
-        latency: "1.41s",
-        text: "IN WITNESS WHEREOF, the parties hereto have caused this Agreement to be executed by their duly authorized representatives.\n\nFOR BUYER: ____________________ Date: Oct 14, 2026\nFOR PROVIDER: _________________ Date: Oct 15, 2026",
-        why: "Signature page with minimal text. Without Page 7 ('Contract') in the sliding window, signature blocks are frequently misclassified as 'Other'."
-      },
-      {
-        page: 9,
-        expected: "Appendix",
-        tokens: 920,
-        latency: "1.63s",
-        text: "EXHIBIT A — TECHNICAL APPENDIX & SLA MATRIX\nAttached to and forming part of Master Services Agreement MSA-2026-04.\nTable 1.1: Uptime Tier Definitions (99.99% Core Network Availability)\nSeverity 1 Response Time: < 15 minutes.",
-        why: "Transitions from the executed Contract (Page 8) into Exhibit A ('Appendix')."
-      },
-      {
-        page: 10,
-        expected: "Appendix",
-        tokens: 975,
-        latency: "1.77s",
-        text: "Table 1.2 (Continued): Escalation Matrix & Penalty Credits\nDowntime Window 60–120 mins: 10% Monthly Service Credit\nDowntime Window > 120 mins: 25% Monthly Service Credit\n topology diagram reference notes: Node A -> Redundant Switch B.",
-        why: "Continuation of the SLA Matrix table from Page 9 ('Appendix') without repeating the 'EXHIBIT A' heading."
-      },
-      {
-        page: 11,
-        expected: "Appendix",
-        tokens: 880,
-        latency: "1.55s",
-        text: "EXHIBIT B — SECURITY COMPLIANCE SCHEDULE\n1. Encryption at Rest: AES-256 across all NVMe storage volumes.\n2. Key Rotation Policy: Automated 90-day KMS rotation schedule.\nEnd of Appendices.",
-        why: "Final page of the Appendix section before transitioning to a separate vendor invoice on Page 12."
-      },
-      {
-        page: 12,
-        expected: "Invoice",
-        tokens: 830,
-        latency: "1.49s",
-        text: "INVOICE #INV-90042-B (SEPARATE TELECOM CARRIER BILLING)\nVendor: MetroFiber Dark Optical Ltd.\nAccount Number: MF-44019\nMonthly Dedicated Wavelength Lease (Oct 2026): $4,800.00",
-        why: "Standalone secondary Invoice following the Appendix section."
-      },
-      {
-        page: 13,
-        expected: "Invoice",
-        tokens: 870,
-        latency: "1.62s",
-        text: "MetroFiber Carrier Surcharges & USF Recovery Fee: $312.50\nCross-Connect Cage Patch Panel Fee: $250.00\nTOTAL DUE METROFIBER: $5,362.50\nAuto-Debit scheduled for November 1, 2026.",
-        why: "Second page of the telecom invoice; relies on Page 12's 'Invoice' label to classify carrier fee line items accurately."
-      },
-      {
-        page: 14,
-        expected: "Other",
-        tokens: 790,
-        latency: "1.38s",
-        text: "From: Sarah Jenkins <s.jenkins@buyer-corp.com>\nSent: Tuesday, October 20, 2026 4:15 PM\nTo: AP Approvals\nSubject: RE: Approval to pay Apex & MetroFiber invoices\nHi team — I have verified rack delivery at DC#4. Please release payment.",
-        why: "Printed approval email thread inside the PDF bundle; accurately classified as 'Other'."
-      },
-      {
-        page: 15,
-        expected: "Purchase Order",
-        tokens: 815,
-        latency: "1.44s",
-        text: "CHANGE ORDER / SUPPLEMENTAL PO #PO-2026-9920-CO1\nReference Original PO: #PO-2026-9920\nAdditional Spare Transceiver Modules (Qty: 12) — $3,600.00\nApproved by: VP Infrastructure",
-        why: "Single-page Supplemental Purchase Order near the end of the bundle."
-      },
-      {
-        page: 16,
-        expected: "Other",
-        tokens: 695,
-        latency: "1.22s",
-        text: "DOCUMENT ARCHIVE CHECKLIST & BARCODE SHEET\nScan Batch ID: #BATCH-2026-10-29-004\nTotal Pages Scanned: 16\nQA Operator Initials: MK\n[BARCODE: |||| |||| ||| ||||||]",
-        why: "Last page boundary: next_page is null. Classified as 'Other' (archive routing/barcode sheet)."
-      }
+    // 16-Page Synthetic Procurement Bundle Data (`demo_data.py`)
+    const PAGES = [
+      { p: 1,  label: "Other",          text: "INTERNAL ROUTING SLIP & COVER MEMO\nPacket #PKT-8841 — Q4 Procurement Bundle\nContains: Purchase Order, MSA Contract, Exhibits & Vendor Invoices.", reason: "First page boundary: previous_page is null. Classified as 'Other' (routing sheet) while Page 2 lookahead previews the incoming Purchase Order." },
+      { p: 2,  label: "Purchase Order", text: "PURCHASE ORDER #PO-2026-9920\nVendor: Apex Cloud Infrastructure Inc.\nItem 1: Enterprise GPU Rack Units (Qty: 8) — $140,000.00\nContinued on next page...", reason: "Explicit Purchase Order header on Page 2; sets predicted_label='Purchase Order' for Page 3." },
+      { p: 3,  label: "Purchase Order", text: "Item 2: Optical Interconnect Cables (Qty: 40) — $12,400.00\nItem 3: Onsite Commissioning — $8,500.00\nPO SUBTOTAL: $160,900.00\nAuthorized Buyer Signature: J. Reynolds", reason: "Continuation page with NO 'Purchase Order' header! Carrying Page 2's predicted_label='Purchase Order' prevents misclassifying these line items as an Invoice." },
+      { p: 4,  label: "Invoice",        text: "TAX INVOICE #INV-88410-A\nBilled To: Global Procurement Desk\nReference PO: #PO-2026-9920\nLine 1: Hardware Milestone 1 Delivery — $80,000.00\nContinued on Page 5...", reason: "Clean boundary transition from Purchase Order (Page 3) to a new Tax Invoice on Page 4." },
+      { p: 5,  label: "Invoice",        text: "Line 2: Extended 24/7 Hardware Warranty — $9,400.00\nLine 3: Rack Mounting Kit — $1,150.00\nSales Tax (8.25%): $7,734.38\nTOTAL AMOUNT DUE: $101,484.38", reason: "Canonical problem scenario: Page 5 has line items and totals without an Invoice title. Page 4's carried 'Invoice' label guarantees accurate classification." },
+      { p: 6,  label: "Contract",       text: "MASTER SERVICES AGREEMENT (MSA-2026-04)\nThis Agreement is entered into by and between Buyer and Apex Cloud Infrastructure Inc.\n1. SCOPE OF MANAGED SERVICES", reason: "Transitions from Invoice (Page 5) into a multi-page Master Services Contract." },
+      { p: 7,  label: "Contract",       text: "4. INDEMNIFICATION AND LIMITATION OF LIABILITY\n4.1 Neither party's aggregate liability shall exceed 12 months fees.\n5. CONFIDENTIALITY & SOC2 COMPLIANCE", reason: "Mid-contract legal clauses supported by Page 6 ('Contract') and Page 8 signature block lookahead." },
+      { p: 8,  label: "Contract",       text: "IN WITNESS WHEREOF, the parties hereto have executed this Agreement.\n\nFOR BUYER: ____________________\nFOR PROVIDER: _________________", reason: "Signature page with minimal text. Without Page 7's 'Contract' state, standalone signature pages often fail." },
+      { p: 9,  label: "Appendix",       text: "EXHIBIT A — TECHNICAL APPENDIX & SLA MATRIX\nAttached to Master Services Agreement MSA-2026-04.\nTable 1.1: Core Network Availability 99.99%", reason: "Transitions from the executed Contract (Page 8) into Exhibit A ('Appendix')." },
+      { p: 10, label: "Appendix",       text: "Table 1.2 (Continued): Escalation & Service Credit Schedule\nDowntime 60–120 mins: 10% Credit\nDowntime > 120 mins: 25% Credit", reason: "Continuation of the SLA table from Page 9 without repeating the 'EXHIBIT A' heading." },
+      { p: 11, label: "Appendix",       text: "EXHIBIT B — SECURITY & ENCRYPTION SCHEDULE\n1. AES-256 Storage Encryption at Rest\n2. Automated 90-Day KMS Key Rotation", reason: "Final page of the Appendix section before a separate vendor invoice starts on Page 12." },
+      { p: 12, label: "Invoice",        text: "INVOICE #INV-90042-B (METROFIBER OPTICAL LTD.)\nAccount: MF-44019\nMonthly Dedicated Dark Fiber Lease (Oct 2026): $4,800.00", reason: "Secondary standalone vendor Invoice begins." },
+      { p: 13, label: "Invoice",        text: "Carrier Surcharges & USF Recovery Fee: $312.50\nCross-Connect Patch Panel Fee: $250.00\nTOTAL DUE METROFIBER: $5,362.50", reason: "Second page of the telecom invoice; carries 'Invoice' from Page 12." },
+      { p: 14, label: "Other",          text: "From: Sarah Jenkins <s.jenkins@buyer-corp.com>\nTo: Accounts Payable\nSubject: RE: Approval to release payment for Apex & MetroFiber", reason: "Printed approval email thread inside the PDF bundle; classified as 'Other'." },
+      { p: 15, label: "Purchase Order", text: "SUPPLEMENTAL CHANGE ORDER PO #PO-2026-9920-CO1\nAdditional 12x Spare Optical Transceivers — $3,600.00\nApproved by: VP Infrastructure", reason: "Single-page Supplemental Purchase Order." },
+      { p: 16, label: "Other",          text: "ARCHIVE QA & BARCODE ROUTING SHEET\nBatch ID: #BATCH-2026-10-29\nTotal Pages: 16 | [BARCODE: |||| |||| ||| |||||]", reason: "Last page boundary: next_page is null. Classified as 'Other'." }
     ];
 
-    // State Management
-    let currentIndex = 0;
+    let currentIdx = 0;
     let isPlaying = true;
-    let stepIntervalMs = 2400;
-    let timerId = null;
-    let activeConsoleTab = "stdout"; // "stdout" | "stderr"
-    const failedPagesSet = new Set(); // Pages where user injected an API failure
+    let timer = null;
+    const failedSet = new Set();
 
-    // DOM Elements
-    const pageRibbon = document.getElementById("pageRibbon");
-    const ribbonScrollContainer = document.getElementById("ribbonScrollContainer");
-    const btnPlayPause = document.getElementById("btnPlayPause");
-    const playPauseIcon = document.getElementById("playPauseIcon");
-    const playPauseLabel = document.getElementById("playPauseLabel");
-    const btnStepPrev = document.getElementById("btnStepPrev");
-    const btnStepNext = document.getElementById("btnStepNext");
-    const btnInjectFault = document.getElementById("btnInjectFault");
-    const engineStatusDot = document.getElementById("engineStatusDot");
-    const engineStatusText = document.getElementById("engineStatusText");
+    const trackEl = document.getElementById("pageTrack");
 
-    // Helper for badge CSS classes
-    function getCategoryBadgeClass(label) {
-      if (!label || label === "null" || label === "FAILED") return "cat-FAILED";
-      if (label === "UNKNOWN") return "cat-FAILED";
-      const clean = label.replace(/\s+/g, "");
-      return `cat-${clean}`;
-    }
-
-    // Effective status/label of a page given injected faults
-    function getPageResult(idx) {
-      const item = DEMO_PAGES[idx];
-      const isFailed = failedPagesSet.has(idx);
-      return {
-        page: item.page,
-        label: isFailed ? null : item.expected,
-        status: isFailed ? "failed" : "success",
-        attempts: isFailed ? 3 : 1,
-        error: isFailed ? "TimeoutError: Request timed out after 3 attempts (45s)" : null
-      };
-    }
-
-    // What label is passed into Page N from Page N-1?
-    function getCarriedLabelForTarget(targetIdx) {
-      if (targetIdx === 0) return null; // Boundary: first page has no previous neighbor
-      const prevRes = getPageResult(targetIdx - 1);
-      if (prevRes.status === "failed") return "UNKNOWN"; // Explicit contract from README!
-      return prevRes.label;
-    }
-
-    // Render the 16-page ribbon
-    function renderRibbon() {
-      pageRibbon.innerHTML = "";
-      DEMO_PAGES.forEach((p, idx) => {
-        const res = getPageResult(idx);
-        const node = document.createElement("div");
-        node.className = "page-node";
-
-        let roleTagHtml = `<span class="window-tag tag-idle mono">P${p.page}</span>`;
-        if (idx === currentIndex - 1) {
-          node.classList.add("role-prev");
-          roleTagHtml = `<span class="window-tag tag-prev mono">N−1</span>`;
-        } else if (idx === currentIndex) {
-          node.classList.add("role-target");
-          roleTagHtml = `<span class="window-tag tag-target mono">TARGET N</span>`;
-        } else if (idx === currentIndex + 1) {
-          node.classList.add("role-next");
-          roleTagHtml = `<span class="window-tag tag-next mono">N+1</span>`;
-        }
-
-        const displayLabel = res.status === "failed" ? "null (failed)" : res.label;
-        const badgeClass = getCategoryBadgeClass(res.status === "failed" ? "FAILED" : res.label);
-
-        node.innerHTML = `
-          <div class="d-flex justify-content-between align-items-center">
-            ${roleTagHtml}
-            <span class="mono text-secondary" style="font-size:0.68rem;">#${p.page}</span>
-          </div>
-          <div class="my-1 text-truncate small text-secondary" style="font-size:0.67rem;">
-            ${p.text.split("\n")[0]}
-          </div>
-          <div class="label-pill mono text-center ${badgeClass}">
-            ${displayLabel}
-          </div>
-        `;
-
-        node.addEventListener("click", () => {
-          currentIndex = idx;
-          updateAllViews();
-        });
-
-        pageRibbon.appendChild(node);
-      });
-
-      // Smoothly center the active page card in the horizontal ribbon
-      const activeNode = pageRibbon.children[currentIndex];
-      if (activeNode) {
-        const offset = activeNode.offsetLeft - ribbonScrollContainer.clientWidth / 2 + activeNode.clientWidth / 2;
-        ribbonScrollContainer.scrollTo({ left: Math.max(0, offset), behavior: "smooth" });
-      }
-    }
-
-    // Animate pipeline stages sequentially inside each step
-    function animatePipelineStages(isFailedPage) {
-      const ids = ["stageAssemble", "stageCallLLM", "stageValidate", "stageCarryState"];
-      ids.forEach(id => {
-        const el = document.getElementById(id);
-        el.classList.remove("active-stage", "error-stage");
-      });
-
-      document.getElementById("stageAssemble").classList.add("active-stage");
-      setTimeout(() => {
-        document.getElementById("stageAssemble").classList.remove("active-stage");
-        document.getElementById("stageCallLLM").classList.add(isFailedPage ? "error-stage" : "active-stage");
-      }, 280);
-
-      setTimeout(() => {
-        document.getElementById("stageCallLLM").classList.remove("active-stage", "error-stage");
-        document.getElementById("stageValidate").classList.add(isFailedPage ? "error-stage" : "active-stage");
-      }, 600);
-
-      setTimeout(() => {
-        document.getElementById("stageValidate").classList.remove("active-stage", "error-stage");
-        document.getElementById("stageCarryState").classList.add(isFailedPage ? "error-stage" : "active-stage");
-      }, 920);
-    }
-
-    // Syntax-highlighted JSON helper
-    function syntaxHighlightJson(obj) {
-      const raw = JSON.stringify(obj, null, 2);
-      return raw.replace(
+    function highlightJson(obj) {
+      return JSON.stringify(obj, null, 2).replace(
         /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-        (match) => {
-          let cls = "json-num";
-          if (/^"/.test(match)) {
-            cls = /:$/.test(match) ? "json-key" : "json-str";
-          } else if (/null/.test(match)) {
-            cls = "json-null";
-          }
-          return `<span class="${cls}">${match}</span>`;
+        (m) => {
+          let c = "j-num";
+          if (/^"/.test(m)) c = /:$/.test(m) ? "j-key" : "j-str";
+          else if (/null/.test(m)) c = "j-null";
+          return `<span class="${c}">${m}</span>`;
         }
       );
     }
 
-    // Synchronize all panels to currentIndex
-    function updateAllViews() {
-      const targetPageObj = DEMO_PAGES[currentIndex];
-      const prevPageObj = currentIndex > 0 ? DEMO_PAGES[currentIndex - 1] : null;
-      const nextPageObj = currentIndex < DEMO_PAGES.length - 1 ? DEMO_PAGES[currentIndex + 1] : null;
+    function updateStage() {
+      const curr = PAGES[currentIdx];
+      const prev = currentIdx > 0 ? PAGES[currentIdx - 1] : null;
+      const next = currentIdx < PAGES.length - 1 ? PAGES[currentIdx + 1] : null;
 
-      const targetRes = getPageResult(currentIndex);
-      const carriedPrevLabel = getCarriedLabelForTarget(currentIndex);
-      const isTargetFailed = targetRes.status === "failed";
+      const isCurrFailed = failedSet.has(currentIdx);
+      const isPrevFailed = prev && failedSet.has(currentIdx - 1);
+      const carriedLabel = !prev ? null : (isPrevFailed ? "UNKNOWN" : prev.label);
 
-      renderRibbon();
-      animatePipelineStages(isTargetFailed);
+      // Update Window Range Header
+      const pPrevStr = prev ? `Page ${prev.p}` : "null";
+      const pNextStr = next ? `Page ${next.p}` : "null";
+      document.getElementById("windowRangeLabel").textContent = `[ ${pPrevStr} , Page ${curr.p} , ${pNextStr} ]`;
 
-      // 1. Top Telemetry Metrics
-      document.getElementById("metricPageCounter").textContent = `Page ${targetPageObj.page} / 16`;
-      if (currentIndex === 0) {
-        document.getElementById("metricBoundaryState").innerHTML = `Boundary: <span class="mono text-warning">previous_page = null</span>`;
-      } else if (currentIndex === DEMO_PAGES.length - 1) {
-        document.getElementById("metricBoundaryState").innerHTML = `Boundary: <span class="mono text-warning">next_page = null</span>`;
+      // Render 16-Page Track
+      trackEl.innerHTML = "";
+      PAGES.forEach((item, i) => {
+        const node = document.createElement("div");
+        node.className = "track-node mono";
+        let role = "";
+        if (i === currentIdx - 1) { node.classList.add("is-prev"); role = "N−1"; }
+        else if (i === currentIdx) { node.classList.add("is-target"); role = "TARGET"; }
+        else if (i === currentIdx + 1) { node.classList.add("is-next"); role = "N+1"; }
+
+        const dotColor = failedSet.has(i) ? "var(--rose)" : "var(--emerald)";
+        node.innerHTML = `
+          <span class="node-role-label">${role || "P" + item.p}</span>
+          <span class="fw-bold" style="font-size:0.82rem;">${item.p}</span>
+          <span style="width:6px;height:6px;border-radius:50%;background:${dotColor};margin-top:3px;"></span>
+        `;
+        node.onclick = () => { currentIdx = i; updateStage(); };
+        trackEl.appendChild(node);
+      });
+
+      // Update N-1 Card
+      document.getElementById("prevPageHeader").textContent = prev ? `Page ${prev.p}` : "null (Start Boundary)";
+      document.getElementById("prevPageText").textContent = prev ? prev.text : "null — First page of document has no previous neighbor.";
+      const prevBadge = document.getElementById("prevCarriedBadge");
+      prevBadge.textContent = carriedLabel === null ? "null" : carriedLabel;
+      prevBadge.className = "pill-badge mono " + (carriedLabel === "UNKNOWN" ? "pill-rose" : "pill-indigo");
+
+      // Update Target Page N Card
+      document.getElementById("targetPageHeader").textContent = `Page ${curr.p} of 16`;
+      document.getElementById("targetPageText").textContent = curr.text;
+      const outBadge = document.getElementById("targetOutputBadge");
+      if (isCurrFailed) {
+        outBadge.textContent = `label: null (status: "failed")`;
+        outBadge.className = "pill-badge pill-rose mono";
       } else {
-        document.getElementById("metricBoundaryState").innerHTML = `Full 3-Page Window <span class="mono text-success">[P${targetPageObj.page - 1}, P${targetPageObj.page}, P${targetPageObj.page + 1}]</span>`;
+        outBadge.textContent = `{"label": "${curr.label}"}`;
+        outBadge.className = "pill-badge pill-emerald mono";
       }
 
-      const metricCarriedEl = document.getElementById("metricCarriedLabel");
-      metricCarriedEl.textContent = carriedPrevLabel === null ? "null" : carriedPrevLabel;
-      metricCarriedEl.className = "metric-value mono " + (
-        carriedPrevLabel === "UNKNOWN" ? "text-danger" :
-        carriedPrevLabel === null ? "text-secondary" : "text-primary"
-      );
+      // Update N+1 Card
+      document.getElementById("nextPageHeader").textContent = next ? `Page ${next.p}` : "null (End Boundary)";
+      document.getElementById("nextPageText").textContent = next ? next.text : "null — Last page of document has no next neighbor.";
 
-      const matchedCount = DEMO_PAGES.length - failedPagesSet.size;
-      const pct = Math.round((matchedCount / DEMO_PAGES.length) * 100);
-      const metricAccEl = document.getElementById("metricAccuracy");
-      metricAccEl.textContent = `${matchedCount} / 16 (${pct}%)`;
-      metricAccEl.className = "metric-value mono " + (failedPagesSet.size === 0 ? "text-success" : "text-warning");
+      // Update Live Reasoning & stdout bar
+      const reasonTitle = document.getElementById("liveReasonTitle");
+      const reasonBody = document.getElementById("liveReasonBody");
 
-      document.getElementById("metricTokens").textContent = `~${targetPageObj.tokens} tok`;
-      document.getElementById("metricLatency").textContent = isTargetFailed
-        ? `3 attempts • 45.0s timeout`
-        : `~6 completion tok • ${targetPageObj.latency}`;
-
-      // 2. Three-Page Inspector Slots
-      // N-1 Slot
-      document.getElementById("slotPrevPageNum").textContent = prevPageObj ? `Page ${prevPageObj.page}` : "null (Start)";
-      const slotPrevLabelEl = document.getElementById("slotPrevLabel");
-      slotPrevLabelEl.textContent = carriedPrevLabel === null ? "null" : carriedPrevLabel;
-      slotPrevLabelEl.className = "label-pill mono " + getCategoryBadgeClass(carriedPrevLabel);
-      document.getElementById("slotPrevText").textContent = prevPageObj
-        ? prevPageObj.text
-        : "null — Boundary Condition: Page 1 has no previous neighbor.";
-
-      // Target N Slot
-      document.getElementById("slotTargetPageNum").textContent = `Page ${targetPageObj.page}`;
-      const slotTargetLabelEl = document.getElementById("slotTargetLabel");
-      slotTargetLabelEl.textContent = isTargetFailed ? "null (status: failed)" : targetRes.label;
-      slotTargetLabelEl.className = "label-pill mono " + getCategoryBadgeClass(isTargetFailed ? "FAILED" : targetRes.label);
-      document.getElementById("slotTargetText").textContent = targetPageObj.text;
-
-      // N+1 Slot
-      document.getElementById("slotNextPageNum").textContent = nextPageObj ? `Page ${nextPageObj.page}` : "null (End)";
-      document.getElementById("slotNextText").textContent = nextPageObj
-        ? nextPageObj.text
-        : "null — Boundary Condition: Page 16 has no next neighbor.";
-
-      // Explanation Banner
-      const explainHeadline = document.getElementById("explainHeadline");
-      const explainDescription = document.getElementById("explainDescription");
-      if (isTargetFailed) {
-        explainHeadline.innerHTML = `<span class="text-danger-emphasis">Fault Isolation Triggered on Page ${targetPageObj.page}:</span>`;
-        explainDescription.textContent =
-          `Page ${targetPageObj.page} failed after MAX_RETRIES=2 (3 attempts total). It records label: null, status: "failed", and the run continues! Crucially, Page ${Math.min(16, targetPageObj.page + 1)} will receive Page ${targetPageObj.page}'s text with predicted_label: "UNKNOWN" (never 'Other') to prevent cascading misclassification.`;
-      } else if (carriedPrevLabel === "UNKNOWN") {
-        explainHeadline.innerHTML = `<span class="text-warning">Recovering After Upstream Failure (predicted_label = "UNKNOWN"):</span>`;
-        explainDescription.textContent =
-          `Because Page ${targetPageObj.page - 1} failed, Page ${targetPageObj.page} receives previous_page.predicted_label = "UNKNOWN" alongside Page ${targetPageObj.page - 1}'s raw text. The LLM inspects the raw neighbor text directly and classifies Page ${targetPageObj.page} as '${targetRes.label}'.`;
+      if (isCurrFailed) {
+        reasonTitle.innerHTML = `<span style="color:var(--rose)">Failure Isolation Triggered on Page ${curr.p}</span>`;
+        reasonBody.textContent = `Retries exhausted. Page ${curr.p} records label: null, status: "failed" without aborting the document run, and passes predicted_label: "UNKNOWN" (not 'Other') to Page ${Math.min(16, curr.p + 1)}.`;
+      } else if (carriedLabel === "UNKNOWN") {
+        reasonTitle.innerHTML = `<span style="color:var(--amber)">Downstream Recovery on Page ${curr.p} (previous_page.predicted_label = "UNKNOWN")</span>`;
+        reasonBody.textContent = `Because Page ${curr.p - 1} failed, Page ${curr.p} receives predicted_label: "UNKNOWN" alongside Page ${curr.p - 1}'s raw text and still classifies accurately as '${curr.label}'.`;
       } else {
-        explainHeadline.textContent = `Page ${targetPageObj.page} Contextual Reasoning (${targetRes.label}):`;
-        explainDescription.textContent = targetPageObj.why;
+        reasonTitle.textContent = `Page ${curr.p} Classified as "${curr.label}"`;
+        reasonBody.textContent = curr.reason;
       }
 
-      // 3. Update Right-hand Pipeline Badges
-      document.getElementById("stageAttemptsBadge").textContent = isTargetFailed ? "attempts: 3/3 (FAILED)" : "attempt: 1/3";
-      document.getElementById("stageValidateStatus").textContent = isTargetFailed
-        ? "ERROR → label: null"
-        : `{"label": "${targetRes.label}"}`;
-      document.getElementById("stageValidateStatus").className = "mono small " + (isTargetFailed ? "text-danger" : "text-success");
+      const stdoutObj = {
+        page: curr.p,
+        label: isCurrFailed ? null : curr.label,
+        status: isCurrFailed ? "failed" : "success",
+        attempts: isCurrFailed ? 3 : 1,
+        error: isCurrFailed ? "TimeoutError after 3 attempts" : null
+      };
+      document.getElementById("liveStdoutObject").textContent = JSON.stringify(stdoutObj);
 
-      const nextCarried = isTargetFailed ? "UNKNOWN" : targetRes.label;
-      document.getElementById("stageCarryBadge").textContent = `Pass "${nextCarried}" → P${Math.min(16, targetPageObj.page + 1)}`;
+      // Update Break button text
+      document.getElementById("breakText").textContent = isCurrFailed
+        ? `Restore Page ${curr.p}`
+        : `Simulate Failure on Page ${curr.p}`;
 
-      // Update Fault Button state
-      if (isTargetFailed) {
-        btnInjectFault.classList.replace("btn-glass", "btn-danger");
-        btnInjectFault.innerHTML = `<i class="bi bi-arrow-counterclockwise"></i><span>Restore Page ${targetPageObj.page}</span>`;
-      } else {
-        btnInjectFault.classList.replace("btn-danger", "btn-glass");
-        btnInjectFault.innerHTML = `<i class="bi bi-lightning-charge"></i><span>Simulate API Failure</span>`;
-      }
+      // Update Section 3 Synchronized Payload Inspector
+      document.getElementById("payloadWindowTitle").textContent =
+        `POST /v1/chat/completions — Active Page ${curr.p} Payload`;
 
-      // 4. Live LLM Request Payload Console
-      const llmPayload = {
+      const fullPayload = {
         model: "openai/gpt-4o-mini",
         temperature: 0.0,
         messages: [
           {
             role: "system",
-            content: "Classify ONLY target_page into one of: Invoice, Purchase Order, Contract, Appendix, Other. Use previous_page and next_page solely as supporting context for multi-page continuations. Return strict JSON: {\"label\": \"<AllowedLabel>\"}."
+            content: "Classify ONLY target_page into one of: Invoice, Purchase Order, Contract, Appendix, Other. Use previous_page and next_page solely as supporting evidence. Return strict JSON: {\"label\": \"...\"}."
           },
           {
             role: "user",
             content: {
-              document_id: "doc-procurement-016",
-              page_number: targetPageObj.page,
-              previous_page: prevPageObj
-                ? {
-                    predicted_label: carriedPrevLabel,
-                    text: prevPageObj.text
-                  }
-                : null,
-              target_page: {
-                text: targetPageObj.text
-              },
-              next_page: nextPageObj
-                ? {
-                    text: nextPageObj.text
-                  }
-                : null
+              document_id: "doc-001",
+              page_number: curr.p,
+              previous_page: prev ? { predicted_label: carriedLabel, text: prev.text } : null,
+              target_page: { text: curr.text },
+              next_page: next ? { text: next.text } : null
             }
           }
         ]
       };
-      document.getElementById("payloadConsole").innerHTML = syntaxHighlightJson(llmPayload);
-
-      // 5. Render stdout / stderr Console
-      renderOutputStreamConsole();
+      document.getElementById("livePayloadPre").innerHTML = highlightJson(fullPayload);
     }
 
-    function renderOutputStreamConsole() {
-      const consoleEl = document.getElementById("outputStreamConsole");
-      const allResults = DEMO_PAGES.map((_, idx) => getPageResult(idx));
-
-      if (activeConsoleTab === "stdout") {
-        // Highlight up to current page in the simulated run
-        const visibleResults = allResults.slice(0, currentIndex + 1);
-        consoleEl.innerHTML = syntaxHighlightJson(visibleResults);
-      } else {
-        const failedPages = allResults.filter(r => r.status === "failed").map(r => r.page);
-        const matchedCount = DEMO_PAGES.length - failedPages.length;
-        const logLines = allResults.slice(0, currentIndex + 1).map((r, i) => {
-          const carried = getCarriedLabelForTarget(i);
-          if (r.status === "failed") {
-            return `<span class="text-danger">[ERROR] doc=doc-001 page=${r.page}/16 prev_label=${carried} status=failed attempts=${r.attempts} err="${r.error}"</span>`;
-          }
-          return `<span class="text-secondary">[INFO]</span>  doc=doc-001 page=${r.page}/16 prev_label=<span class="text-info">${carried}</span> predicted=<span class="text-success">"${r.label}"</span> attempts=1 tokens=${DEMO_PAGES[i].tokens} latency=${DEMO_PAGES[i].latency}`;
-        }).join("\n");
-
-        const evalObj = {
-          evaluation: {
-            total_pages: 16,
-            matched_count: matchedCount,
-            failed_pages: failedPages,
-            unmatched: []
-          }
-        };
-
-        consoleEl.innerHTML = `${logLines}\n\n<span class="text-warning"># stderr Evaluation Summary (demo_data.py vs expected_labels):</span>\n${syntaxHighlightJson(evalObj)}`;
-      }
-    }
-
-    // Continuous Animation Loop
     function startLoop() {
-      stopLoop();
-      timerId = setInterval(() => {
-        currentIndex = (currentIndex + 1) % DEMO_PAGES.length;
-        updateAllViews();
-      }, stepIntervalMs);
+      clearInterval(timer);
+      timer = setInterval(() => {
+        currentIdx = (currentIdx + 1) % PAGES.length;
+        updateStage();
+      }, 2400);
     }
 
-    function stopLoop() {
-      if (timerId) {
-        clearInterval(timerId);
-        timerId = null;
-      }
-    }
-
-    // Event Listeners
-    btnPlayPause.addEventListener("click", () => {
+    document.getElementById("btnPlayPause").onclick = () => {
       isPlaying = !isPlaying;
-      if (isPlaying) {
-        playPauseIcon.className = "bi bi-pause-fill";
-        playPauseLabel.textContent = "Pause";
-        engineStatusDot.style.background = "var(--accent-emerald)";
-        engineStatusText.textContent = "STREAMING WINDOW";
-        startLoop();
-      } else {
-        playPauseIcon.className = "bi bi-play-fill";
-        playPauseLabel.textContent = "Resume";
-        engineStatusDot.style.background = "var(--accent-amber)";
-        engineStatusText.textContent = "PAUSED INSPECTING";
-        stopLoop();
-      }
-    });
+      document.getElementById("playIcon").className = isPlaying ? "bi bi-pause-fill me-1" : "bi bi-play-fill me-1";
+      document.getElementById("playText").textContent = isPlaying ? "Pause Stream" : "Resume Stream";
+      if (isPlaying) startLoop(); else clearInterval(timer);
+    };
 
-    btnStepPrev.addEventListener("click", () => {
-      currentIndex = (currentIndex - 1 + DEMO_PAGES.length) % DEMO_PAGES.length;
-      updateAllViews();
-    });
+    document.getElementById("btnPrev").onclick = () => {
+      currentIdx = (currentIdx - 1 + PAGES.length) % PAGES.length;
+      updateStage();
+    };
 
-    btnStepNext.addEventListener("click", () => {
-      currentIndex = (currentIndex + 1) % DEMO_PAGES.length;
-      updateAllViews();
-    });
+    document.getElementById("btnNext").onclick = () => {
+      currentIdx = (currentIdx + 1) % PAGES.length;
+      updateStage();
+    };
 
-    btnInjectFault.addEventListener("click", () => {
-      if (failedPagesSet.has(currentIndex)) {
-        failedPagesSet.delete(currentIndex);
-      } else {
-        failedPagesSet.add(currentIndex);
-      }
-      updateAllViews();
-    });
+    document.getElementById("btnBreak").onclick = () => {
+      if (failedSet.has(currentIdx)) failedSet.delete(currentIdx);
+      else failedSet.add(currentIdx);
+      updateStage();
+    };
 
-    document.querySelectorAll(".speed-btn").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        document.querySelectorAll(".speed-btn").forEach(b => b.classList.remove("active"));
-        e.currentTarget.classList.add("active");
-        stepIntervalMs = Number(e.currentTarget.dataset.speed);
-        if (isPlaying) startLoop();
+    // Scroll reveal observer for sections
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add("visible");
       });
-    });
+    }, { threshold: 0.12 });
 
-    const tabBtnStdout = document.getElementById("tabBtnStdout");
-    const tabBtnStderr = document.getElementById("tabBtnStderr");
+    document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
 
-    tabBtnStdout.addEventListener("click", () => {
-      activeConsoleTab = "stdout";
-      tabBtnStdout.className = "btn btn-sm btn-glass-cyan py-1 px-2 mono";
-      tabBtnStderr.className = "btn btn-sm btn-glass py-1 px-2 mono";
-      renderOutputStreamConsole();
-    });
-
-    tabBtnStderr.addEventListener("click", () => {
-      activeConsoleTab = "stderr";
-      tabBtnStderr.className = "btn btn-sm btn-glass-cyan py-1 px-2 mono";
-      tabBtnStdout.className = "btn btn-sm btn-glass py-1 px-2 mono";
-      renderOutputStreamConsole();
-    });
-
-    // Boot
-    updateAllViews();
+    // Initialize
+    updateStage();
     startLoop();
   </script>
 </body>
